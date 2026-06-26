@@ -1,0 +1,4 @@
+*.o
+mini-httpd
+.DS_Store
+*.dSYM/
