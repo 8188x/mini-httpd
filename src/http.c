@@ -8,6 +8,7 @@
 
 #include "http.h"
 #include "static.h"
+#include "server.h"
 
 /* ─── Status Texts ───────────────────────────────────────────────── */
 
@@ -153,6 +154,7 @@ static void build_error_page(char *buf, size_t cap, int code, const char *msg) {
 static void write_access_log(const http_request_t *req,
                              const http_response_t *res,
                              const struct timeval *start) {
+    g_server_stats.total_requests++;
     struct timeval end;
     gettimeofday(&end, NULL);
 
@@ -220,9 +222,38 @@ void handle_client(int client_fd, const char *root) {
         return;
     }
 
+    /* API: Server Status */
+    if (strcmp(req.path, "/api/status") == 0) {
+        double uptime = difftime(time(NULL), g_server_stats.start_time);
+        int h = (int)uptime / 3600;
+        int m = ((int)uptime % 3600) / 60;
+        int ss = (int)uptime % 60;
+        char json[1024];
+        int n = 0;
+        n += snprintf(json + n, sizeof(json) - n, "{");
+        n += snprintf(json + n, sizeof(json) - n, "\"version\":\"0.2\",");
+        n += snprintf(json + n, sizeof(json) - n, "\"requests\":%lu,", g_server_stats.total_requests);
+        n += snprintf(json + n, sizeof(json) - n, "\"bytes\":%lu,", g_server_stats.total_bytes);
+        n += snprintf(json + n, sizeof(json) - n, "\"uptime\":%.0f,", uptime);
+        n += snprintf(json + n, sizeof(json) - n, "\"uptime_str\":\"%dh %dm %ds\",", h, m, ss);
+        n += snprintf(json + n, sizeof(json) - n, "\"status\":\"running\"");
+        n += snprintf(json + n, sizeof(json) - n, "}");
+        http_response_t res = {
+            .status_code = 200,
+            .content_type = "application/json; charset=utf-8",
+            .body = json,
+            .body_len = (size_t)n,
+        };
+        char wbuf[4096];
+        int wlen = http_build_response(&res, wbuf, sizeof(wbuf));
+        if (wlen > 0) write(client_fd, wbuf, (size_t)wlen);
+        g_server_stats.total_bytes += (unsigned long)(wlen > 0 ? wlen : 0);
+        write_access_log(&req, &res, &tv_start);
+        return;
+    }
+
     http_response_t res;
     int err = static_serve(root, &req, &res);
-
     if (err != 0) {
         char body[1024];
         build_error_page(body, sizeof(body), err,

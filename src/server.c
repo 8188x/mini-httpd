@@ -13,6 +13,10 @@
 #include "server.h"
 #include "http.h"
 
+/* ─── Global Server Stats ────────────────────────────────────────── */
+
+server_stats_t g_server_stats = {0, 0, 0, ""};
+
 /* ─── Socket Helpers ─────────────────────────────────────────────── */
 
 static int set_nonblock(int fd) {
@@ -26,6 +30,9 @@ int server_init(server_t *srv, int port, const char *root) {
     srv->port = port;
     srv->fd   = -1;
     strncpy(srv->root, root, sizeof(srv->root) - 1);
+
+    g_server_stats.start_time = time(NULL);
+    strncpy(g_server_stats.root, root, sizeof(g_server_stats.root) - 1);
 
     /* Create TCP socket */
     srv->fd = socket(AF_INET, SOCK_STREAM, 0);

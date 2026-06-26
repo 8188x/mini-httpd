@@ -83,6 +83,14 @@ body{
 </head>
 <body>
 <div class="container">
+  <div class="nav">
+    <span class="nav-brand">⚡ mini-httpd</span>
+    <a href="/">Home</a>
+    <a href="/dashboard.html">Dashboard</a>
+    <a href="/docs/">Docs</a>
+    <a href="https://github.com/8188x/mini-httpd">GitHub</a>
+  </div>
+<!-- Header -->
 
   <!-- Header -->
   <div class="header">
@@ -191,11 +199,15 @@ body{
     <span class="tech-badge amber">epoll-ready</span>
   </div>
 
-</div>
-
-<div class="footer">
-  <a href="https://github.com/8188x/mini-httpd">github.com/8188x/mini-httpd</a>
+  <div class="footer">
+    <a href="https://github.com/8188x/mini-httpd">github.com/8188x/mini-httpd</a>
+  </div>
 </div>
 
 </body>
 </html>
+.nav{display:flex;gap:12px;align-items:center;margin-bottom:40px}
+.nav a{color:#64748b;text-decoration:none;font-size:0.78rem;padding:6px 14px;border-radius:8px;border:1px solid transparent;transition:all 0.15s}
+.nav a:hover{color:#e2e8f0;border-color:#334155}
+.nav-brand{font-size:0.85rem;font-weight:600;color:#f1f5f9;margin-right:auto}
+.nav{display:flex;gap:12px;align-items:center;margin-bottom:40px}

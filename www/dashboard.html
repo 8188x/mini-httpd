@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard · mini-httpd</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif;background:#0b1121;color:#e2e8f0;min-height:100vh;background-image:radial-gradient(ellipse 80% 50% at 50% -20%,rgba(59,130,246,0.06),transparent)}
+.container{max-width:900px;margin:0 auto;padding:40px 24px;width:100%}
+
+/* Nav */
+.nav{display:flex;gap:12px;align-items:center;margin-bottom:40px;animation:fadeIn 0.4s ease-out}
+.nav a{color:#64748b;text-decoration:none;font-size:0.78rem;padding:6px 14px;border-radius:8px;border:1px solid transparent;transition:all 0.15s}
+.nav a:hover{color:#e2e8f0;border-color:#334155}
+.nav .brand{font-size:0.85rem;font-weight:600;color:#f1f5f9;margin-right:auto}
+
+/* Header */
+.header{display:flex;align-items:center;gap:12px;margin-bottom:32px;animation:fadeIn 0.4s ease-out 0.05s both}
+.header .icon{width:40px;height:40px;background:linear-gradient(135deg,#3b82f6,#2563eb);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem}
+.header h1{font-size:1.4rem;font-weight:700}
+.header .live{font-size:0.68rem;color:#22c55e;display:flex;align-items:center;gap:6px;margin-left:auto}
+.header .live-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;animation:pulse 1.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* Metric Grid */
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:32px;animation:fadeIn 0.4s ease-out 0.1s both}
+.metric{background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:20px;transition:border-color 0.2s}
+.metric:hover{border-color:#334155}
+.metric .label{font-size:0.68rem;text-transform:uppercase;letter-spacing:0.5px;color:#64748b;margin-bottom:8px}
+.metric .value{font-size:1.5rem;font-weight:700;color:#f1f5f9;font-variant-numeric:tabular-nums}
+.metric .value.blue{color:#60a5fa}
+.metric .value.green{color:#22c55e}
+.metric .value.amber{color:#fbbf24}
+.metric .value.purple{color:#a78bfa}
+.metric .sub{font-size:0.72rem;color:#475569;margin-top:4px}
+
+/* Uptime bar */
+.uptime-section{background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:20px;margin-bottom:32px;animation:fadeIn 0.4s ease-out 0.15s both}
+.uptime-section .label{font-size:0.68rem;text-transform:uppercase;letter-spacing:0.5px;color:#64748b;margin-bottom:12px}
+.uptime-section .bar-bg{background:#1e293b;height:6px;border-radius:3px;overflow:hidden}
+.uptime-section .bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,#3b82f6,#22c55e);transition:width 1s ease}
+.uptime-section .bar-labels{display:flex;justify-content:space-between;font-size:0.68rem;color:#475569;margin-top:6px}
+
+/* Request log */
+.log-section{background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:20px;animation:fadeIn 0.4s ease-out 0.2s both}
+.log-section .label{font-size:0.68rem;text-transform:uppercase;letter-spacing:0.5px;color:#64748b;margin-bottom:12px}
+.log-section .empty{color:#475569;font-size:0.78rem;padding:20px;text-align:center}
+.log-section table{width:100%;border-collapse:collapse;font-size:0.78rem}
+.log-section th{text-align:left;padding:6px 8px;color:#64748b;font-weight:500;border-bottom:1px solid #1e293b}
+.log-section td{padding:6px 8px;border-bottom:1px solid #0f172a;font-family:'SF Mono','Menlo',monospace;color:#94a3b8}
+.log-section .status-2{color:#22c55e}
+.log-section .status-4{color:#fbbf24}
+.log-section .status-5{color:#f87171}
+
+/* Footer */
+.footer{text-align:center;padding:24px;font-size:0.7rem;color:#475569;animation:fadeIn 0.4s ease-out 0.25s both}
+
+@media(max-width:640px){
+  .container{padding:24px 16px}
+  .metrics{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="nav">
+    <span class="brand">⚡ mini-httpd</span>
+    <a href="/">Home</a>
+    <a href="/dashboard.html">Dashboard</a>
+    <a href="/docs/">Docs</a>
+    <a href="https://github.com/8188x/mini-httpd">GitHub</a>
+  </div>
+
+  <div class="header">
+    <div class="icon">📊</div>
+    <h1>Server Dashboard</h1>
+    <div class="live"><span class="live-dot"></span>LIVE</div>
+  </div>
+
+  <div class="metrics">
+    <div class="metric">
+      <div class="label">Requests</div>
+      <div class="value blue" id="m-requests">—</div>
+      <div class="sub">total served</div>
+    </div>
+    <div class="metric">
+      <div class="label">Bytes Transferred</div>
+      <div class="value green" id="m-bytes">—</div>
+      <div class="sub">total bandwidth</div>
+    </div>
+    <div class="metric">
+      <div class="label">Uptime</div>
+      <div class="value amber" id="m-uptime">—</div>
+      <div class="sub">since start</div>
+    </div>
+    <div class="metric">
+      <div class="label">Version</div>
+      <div class="value purple" id="m-version">—</div>
+      <div class="sub">mini-httpd</div>
+    </div>
+  </div>
+
+  <div class="uptime-section">
+    <div class="label">Uptime Timeline</div>
+    <div class="bar-bg"><div class="bar-fill" id="uptime-bar" style="width:0%"></div></div>
+    <div class="bar-labels">
+      <span id="uptime-start">—</span>
+      <span id="uptime-now">now</span>
+    </div>
+  </div>
+
+  <div class="log-section">
+    <div class="label">Live Request Log <span style="color:#475569;font-weight:400">(auto-refresh 3s)</span></div>
+    <div id="log-container">
+      <div class="empty">Waiting for requests...</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <a href="https://github.com/8188x/mini-httpd" style="color:#64748b;text-decoration:none">github.com/8188x/mini-httpd</a>
+  </div>
+</div>
+
+<script>
+function fmtBytes(b) {
+  if (!b||b==='0') return '0 B';
+  b=parseInt(b);
+  if(b<1024) return b+' B';
+  if(b<1048576) return (b/1024).toFixed(1)+' KB';
+  return (b/1048576).toFixed(1)+' MB';
+}
+
+function fmtUptime(s) {
+  s=parseInt(s);
+  let d=Math.floor(s/86400), h=Math.floor((s%86400)/3600), m=Math.floor((s%3600)/60), sec=s%60;
+  let parts=[];
+  if(d>0) parts.push(d+'d');
+  if(h>0||d>0) parts.push(h+'h');
+  parts.push(m+'m');
+  parts.push(sec+'s');
+  return parts.join(' ');
+}
+
+const startTime = Date.now();
+
+function poll() {
+  fetch('/api/status')
+    .then(r=>r.json())
+    .then(d=>{
+      document.getElementById('m-requests').textContent = d.requests;
+      document.getElementById('m-bytes').textContent = fmtBytes(d.bytes);
+      document.getElementById('m-uptime').textContent = fmtUptime(d.uptime);
+      document.getElementById('m-version').textContent = d.version;
+
+      const pct = Math.min(100, (d.uptime / 86400) * 100);
+      document.getElementById('uptime-bar').style.width = pct + '%';
+    })
+    .catch(()=>{});
+}
+poll();
+setInterval(poll, 3000);
+</script>
+</body>
+</html>

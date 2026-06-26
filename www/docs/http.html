@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HTTP Protocol · mini-httpd</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif;background:#0b1121;color:#e2e8f0;min-height:100vh;background-image:radial-gradient(ellipse 80% 50% at 50% -20%,rgba(59,130,246,0.06),transparent)}
+.container{max-width:760px;margin:0 auto;padding:40px 24px;width:100%}
+.nav{display:flex;gap:12px;align-items:center;margin-bottom:40px}
+.nav a{color:#64748b;text-decoration:none;font-size:0.78rem;padding:6px 14px;border-radius:8px;border:1px solid transparent;transition:all 0.15s}
+.nav a:hover{color:#e2e8f0;border-color:#334155}
+.nav .brand{font-size:0.85rem;font-weight:600;color:#f1f5f9;margin-right:auto}
+h1{font-size:1.3rem;font-weight:700;margin-bottom:24px}
+h2{font-size:1rem;font-weight:600;color:#f1f5f9;margin-bottom:12px;margin-top:32px}
+p{font-size:0.85rem;color:#94a3b8;line-height:1.7;margin-bottom:16px}
+p code{background:#1e293b;padding:2px 6px;border-radius:4px;font-size:0.78rem}
+pre{background:#020617;border:1px solid #1e293b;border-radius:8px;padding:16px;font-family:'SF Mono','Menlo',monospace;font-size:0.76rem;line-height:1.6;color:#94a3b8;margin-bottom:16px;overflow-x:auto}
+pre .hl{color:#60a5fa}
+pre .cm{color:#475569}
+.footer{text-align:center;padding:24px;font-size:0.7rem;color:#475569;margin-top:32px}
+.status-codes{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:16px}
+.status{background:#0f172a;border:1px solid #1e293b;border-radius:6px;padding:12px;text-align:center}
+.status .code{font-size:1.1rem;font-weight:700;font-family:'SF Mono',monospace}
+.status .code.s2{color:#22c55e}
+.status .code.s4{color:#fbbf24}
+.status .code.s5{color:#f87171}
+.status .desc{font-size:0.7rem;color:#64748b;margin-top:2px}
+a{color:#60a5fa}
+@media(max-width:640px){.container{padding:24px 16px}}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="nav">
+    <span class="brand">⚡ mini-httpd</span>
+    <a href="/">Home</a>
+    <a href="/dashboard.html">Dashboard</a>
+    <a href="/docs/">Docs</a>
+    <a href="https://github.com/8188x/mini-httpd">GitHub</a>
+  </div>
+
+  <h1>🌐 HTTP Protocol Implementation</h1>
+
+  <h2>Request Parsing</h2>
+  <p>When the server receives raw bytes from a client, the <code>http_parse()</code> function processes them into a structured <code>http_request_t</code>. The parser handles:</p>
+  <ul style="color:#94a3b8;font-size:0.85rem;line-height:2;margin-bottom:16px;padding-left:20px">
+    <li><strong>Request line</strong>: METHOD, path, and HTTP version extracted via sscanf</li>
+    <li><strong>Headers</strong>: Key-value pairs split on ":" with whitespace trimming</li>
+    <li><strong>newlines</strong>: Both \r\n and \n line endings are handled</li>
+    <li><strong>Malformed requests</strong>: Returns -1 on parse failure, triggering a 400 response</li>
+  </ul>
+
+  <p>A typical HTTP request looks like this:</p>
+<pre><span class="hl">GET</span> /index.html <span class="hl">HTTP/1.1</span>
+<span class="cm">Host:</span> localhost:8080
+<span class="cm">User-Agent:</span> curl/8.0
+<span class="cm">Accept:</span> */*
+
+</pre>
+
+  <h2>Response Building</h2>
+  <p>The <code>http_build_response()</code> function constructs a complete HTTP response in a buffer:</p>
+<pre><span class="hl">HTTP/1.1 200 OK</span>
+<span class="cm">Content-Type:</span> text/html
+<span class="cm">Content-Length:</span> 1024
+<span class="cm">Connection:</span> close
+<span class="cm">Server:</span> mini-httpd/0.2
+
+<span class="cm">&lt;html&gt;...body data...&lt;/html&gt;</span></pre>
+
+  <h2>Status Codes</h2>
+  <p>The server supports these HTTP status codes with corresponding body generation:</p>
+  <div class="status-codes">
+    <div class="status"><div class="code s2">200</div><div class="desc">OK</div></div>
+    <div class="status"><div class="code s2">201</div><div class="desc">Created</div></div>
+    <div class="status"><div class="code s2">204</div><div class="desc">No Content</div></div>
+    <div class="status"><div class="code">301</div><div class="desc">Moved</div></div>
+    <div class="status"><div class="code">304</div><div class="desc">Not Modified</div></div>
+    <div class="status"><div class="code s4">400</div><div class="desc">Bad Request</div></div>
+    <div class="status"><div class="code s4">403</div><div class="desc">Forbidden</div></div>
+    <div class="status"><div class="code s4">404</div><div class="desc">Not Found</div></div>
+    <div class="status"><div class="code s4">405</div><div class="desc">Method Not Allowed</div></div>
+    <div class="status"><div class="code s4">413</div><div class="desc">Payload Too Large</div></div>
+    <div class="status"><div class="code s5">500</div><div class="desc">Server Error</div></div>
+    <div class="status"><div class="code s5">501</div><div class="desc">Not Implemented</div></div>
+  </div>
+
+  <h2>Static File Serving</h2>
+  <p>The <code>static_serve()</code> function handles the full lifecycle of serving a file:</p>
+  <ol style="color:#94a3b8;font-size:0.85rem;line-height:2;margin-bottom:16px;padding-left:20px">
+    <li>URL decoding (%20 → space)</li>
+    <li>Query string stripping</li>
+    <li>Path safety checks (no .., no absolute paths)</li>
+    <li>Directory index resolution (index.html or directory listing)</li>
+    <li>File reading with 16MB size limit</li>
+    <li>MIME type detection from file extension</li>
+    <li>Response assembly with Content-Type + Content-Length</li>
+  </ol>
+
+  <h2>Directory Listing</h2>
+  <p>When a URL maps to a directory without an index.html, the server generates an HTML page listing all files with icons, human-readable sizes, and last-modified dates. The directory listing supports recursive navigation through parent directory links.</p>
+
+  <h2>/api/status Endpoint</h2>
+  <p>This special endpoint returns a JSON object with live server metrics, used by the dashboard page for real-time monitoring:</p>
+<pre>{
+  <span class="cm">"version"</span>:   "0.2",
+  <span class="cm">"requests"</span>:  42,
+  <span class="cm">"bytes"</span>:     123456,
+  <span class="cm">"uptime"</span>:    3600,
+  <span class="cm">"uptime_str"</span>: "1h 0m 0s",
+  <span class="cm">"status"</span>:    "running"
+}</pre>
+
+  <div class="footer"><a href="/docs/">← Back to Documentation</a></div>
+</div>
+</body>
+</html>

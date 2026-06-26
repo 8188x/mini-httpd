@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Documentation · mini-httpd</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif;background:#0b1121;color:#e2e8f0;min-height:100vh;background-image:radial-gradient(ellipse 80% 50% at 50% -20%,rgba(59,130,246,0.06),transparent)}
+.container{max-width:800px;margin:0 auto;padding:40px 24px;width:100%}
+.nav{display:flex;gap:12px;align-items:center;margin-bottom:40px}
+.nav a{color:#64748b;text-decoration:none;font-size:0.78rem;padding:6px 14px;border-radius:8px;border:1px solid transparent;transition:all 0.15s}
+.nav a:hover{color:#e2e8f0;border-color:#334155}
+.nav .brand{font-size:0.85rem;font-weight:600;color:#f1f5f9;margin-right:auto}
+.header{font-size:1.3rem;font-weight:700;margin-bottom:8px}
+.header-sub{color:#64748b;font-size:0.85rem;margin-bottom:32px}
+.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.card{background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:24px;text-decoration:none;color:inherit;transition:all 0.15s;display:block}
+.card:hover{border-color:#334155;transform:translateY(-1px)}
+.card .icon{font-size:1.4rem;margin-bottom:8px}
+.card h3{font-size:0.9rem;font-weight:600;color:#f1f5f9;margin-bottom:4px}
+.card p{font-size:0.75rem;color:#64748b;line-height:1.5}
+.footer{text-align:center;padding:24px;font-size:0.7rem;color:#475569;margin-top:20px}
+@media(max-width:640px){.container{padding:24px 16px}}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="nav">
+    <span class="brand">⚡ mini-httpd</span>
+    <a href="/">Home</a>
+    <a href="/dashboard.html">Dashboard</a>
+    <a href="/docs/">Docs</a>
+    <a href="https://github.com/8188x/mini-httpd">GitHub</a>
+  </div>
+  <div class="header">📚 Documentation</div>
+  <div class="header-sub">Understanding how mini-httpd works, from socket to HTTP response.</div>
+  <div class="card-grid">
+    <a class="card" href="/docs/architecture.html">
+      <div class="icon">🏗️</div>
+      <h3>Architecture Overview</h3>
+      <p>Server lifecycle, event loop design, module structure, and request flow.</p>
+    </a>
+    <a class="card" href="/docs/http.html">
+      <div class="icon">🌐</div>
+      <h3>HTTP Protocol</h3>
+      <p>Request parsing, response building, status codes, and MIME type handling.</p>
+    </a>
+    <a class="card" href="https://github.com/8188x/mini-httpd">
+      <div class="icon">💻</div>
+      <h3>Source Code</h3>
+      <p>Browse the full source on GitHub. All C99, ~800 lines of clean code.</p>
+    </a>
+  </div>
+  <div class="footer"><a href="https://github.com/8188x/mini-httpd" style="color:#64748b;text-decoration:none">github.com/8188x/mini-httpd</a></div>
+</div>
+</body>
+</html>
