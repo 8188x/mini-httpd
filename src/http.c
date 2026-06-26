@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <time.h>
+#include <sys/time.h>
 #include <sys/socket.h>
 
 #include "http.h"
@@ -43,7 +45,6 @@ static char *strtrim(char *s) {
 int http_parse(const char *raw, http_request_t *req) {
     memset(req, 0, sizeof(*req));
 
-    /* Parse request line: "METHOD /path HTTP/1.1\r\n" */
     char line[1024];
     int i = 0;
     while (raw[i] && raw[i] != '\r' && raw[i] != '\n' && i < (int)sizeof(line)-1) {
@@ -52,24 +53,21 @@ int http_parse(const char *raw, http_request_t *req) {
     line[i] = '\0';
 
     char method[32], path[1024], version[32];
-    if (sscanf(line, "%31s %1023s %31s", method, path, version) < 2) {
+    if (sscanf(line, "%31s %1023s %31s", method, path, version) < 2)
         return -1;
-    }
 
     strncpy(req->method, method, sizeof(req->method) - 1);
     strncpy(req->path,   path,   sizeof(req->path)   - 1);
     strncpy(req->version,version,sizeof(req->version)- 1);
 
-    /* Parse headers */
     const char *p = raw + i;
     while (*p == '\r' || *p == '\n') p++;
 
     while (*p && *p != '\r' && *p != '\n' && req->nheaders < MAX_HEADERS) {
         char hbuf[512];
         int j = 0;
-        while (*p && *p != '\r' && *p != '\n' && j < 511) {
+        while (*p && *p != '\r' && *p != '\n' && j < 511)
             hbuf[j++] = *p++;
-        }
         hbuf[j] = '\0';
 
         char *colon = strchr(hbuf, ':');
@@ -81,10 +79,8 @@ int http_parse(const char *raw, http_request_t *req) {
                     sizeof(req->headers[0][1]) - 1);
             req->nheaders++;
         }
-
         while (*p == '\r' || *p == '\n') p++;
     }
-
     return 0;
 }
 
@@ -98,7 +94,7 @@ int http_build_response(const http_response_t *res, char *buf, size_t cap) {
         "Content-Type: %s\r\n"
         "Content-Length: %zu\r\n"
         "Connection: close\r\n"
-        "Server: mini-httpd/0.1\r\n"
+        "Server: mini-httpd/0.2\r\n"
         "\r\n",
         res->status_code, status,
         res->content_type ? res->content_type : "text/plain",
@@ -106,46 +102,93 @@ int http_build_response(const http_response_t *res, char *buf, size_t cap) {
 
     if (n < 0 || (size_t)n >= cap) return -1;
 
-    /* Append body if it fits */
     if (res->body && res->body_len > 0) {
         size_t remaining = cap - (size_t)n;
         size_t to_copy = res->body_len < remaining ? res->body_len : remaining - 1;
         memcpy(buf + n, res->body, to_copy);
         n += (int)to_copy;
     }
-
     return n;
 }
 
-/* ─── Build error page body ──────────────────────────────────────── */
+/* ─── Styled error page generation ───────────────────────────────── */
 
 static void build_error_page(char *buf, size_t cap, int code, const char *msg) {
+    const char *hint = "";
+    if (code == 404) hint = "The requested resource could not be found.";
+    else if (code == 403) hint = "You don't have permission to access this resource.";
+    else if (code == 400) hint = "The server could not understand the request.";
+    else if (code == 413) hint = "The request entity is too large.";
+    else if (code == 500) hint = "An unexpected condition was encountered.";
+    else if (code == 501) hint = "The requested method is not supported.";
+
     snprintf(buf, cap,
         "<!DOCTYPE html><html lang=\"zh-CN\"><head><meta charset=\"UTF-8\">"
+        "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1.0\">"
         "<title>%d %s</title>"
-        "<style>body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;"
-        "background:#f0f2f7;display:flex;justify-content:center;"
-        "align-items:center;height:100vh;margin:0;color:#1e293b}"
-        ".c{text-align:center}.c h1{font-size:4rem;margin:0;color:#2c3e7a}"
-        ".c p{font-size:1rem;color:#64748b}</style></head><body>"
-        "<div class=\"c\"><h1>%d</h1><p>%s</p></div></body></html>",
-        code, msg, code, msg);
+        "<style>"
+        "*{margin:0;padding:0;box-sizing:border-box}"
+        "body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif;"
+        "background:#0b1121;color:#e2e8f0;display:flex;justify-content:center;"
+        "align-items:center;height:100vh;margin:0;"
+        "background-image:radial-gradient(ellipse 80%% 50%% at 50%% -20%%,rgba(239,68,68,0.06),transparent)}"
+        ".c{text-align:center}"
+        ".c h1{font-size:5rem;font-weight:800;line-height:1;margin-bottom:4px;"
+        "background:linear-gradient(135deg,#f87171,#ef4444);"
+        "-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}"
+        ".c .msg{color:#94a3b8;font-size:0.9rem;margin-bottom:4px}"
+        ".c .hint{color:#475569;font-size:0.75rem}"
+        ".c .footer{color:#475569;font-size:0.7rem;margin-top:24px}"
+        "</style></head><body>"
+        "<div class=\"c\"><h1>%d</h1>"
+        "<p class=\"msg\">%s</p>"
+        "<p class=\"hint\">%s</p>"
+        "<p class=\"footer\">mini-httpd</p>"
+        "</div></body></html>",
+        code, msg, code, msg, hint);
+}
+
+/* ─── Access Log ─────────────────────────────────────────────────── */
+
+static void write_access_log(const http_request_t *req,
+                             const http_response_t *res,
+                             const struct timeval *start) {
+    struct timeval end;
+    gettimeofday(&end, NULL);
+
+    long elapsed = (end.tv_sec - start->tv_sec) * 1000000L
+                 + (end.tv_usec - start->tv_usec);
+
+    struct tm *lt = localtime(&end.tv_sec);
+    char tb[16];
+    strftime(tb, sizeof(tb), "%H:%M:%S", lt);
+
+    fprintf(stderr, "\033[90m[%s.%03d]\033[0m %s %s \033[36m%d\033[0m",
+            tb, (int)(end.tv_usec / 1000), req->method, req->path, res->status_code);
+
+    if (res->body_len > 0) {
+        if (res->body_len < 1024)
+            fprintf(stderr, " \033[90m(%zu B)\033[0m", res->body_len);
+        else
+            fprintf(stderr, " \033[90m(%.1f KB)\033[0m",
+                    (double)res->body_len / 1024);
+    }
+    fprintf(stderr, " \033[90m(%ld μs)\033[0m\n", elapsed);
 }
 
 /* ─── Client Handler ─────────────────────────────────────────────── */
 
 void handle_client(int client_fd, const char *root) {
+    struct timeval tv_start;
+    gettimeofday(&tv_start, NULL);
+
     char rbuf[READ_BUF_SIZE];
     ssize_t nread = read(client_fd, rbuf, sizeof(rbuf) - 1);
-
     if (nread <= 0) return;
-
     rbuf[nread] = '\0';
 
-    /* Parse request */
     http_request_t req;
     if (http_parse(rbuf, &req) < 0) {
-        /* Bad Request */
         char body[1024];
         build_error_page(body, sizeof(body), 400, "Bad Request");
         http_response_t res = {
@@ -157,10 +200,10 @@ void handle_client(int client_fd, const char *root) {
         char wbuf[RESP_BUF_SIZE];
         int len = http_build_response(&res, wbuf, sizeof(wbuf));
         if (len > 0) write(client_fd, wbuf, (size_t)len);
+        write_access_log(&req, &res, &tv_start);
         return;
     }
 
-    /* Only GET and HEAD are supported */
     if (strcmp(req.method, "GET") != 0 && strcmp(req.method, "HEAD") != 0) {
         char body[1024];
         build_error_page(body, sizeof(body), 501, "Not Implemented");
@@ -173,10 +216,10 @@ void handle_client(int client_fd, const char *root) {
         char wbuf[RESP_BUF_SIZE];
         int len = http_build_response(&res, wbuf, sizeof(wbuf));
         if (len > 0) write(client_fd, wbuf, (size_t)len);
+        write_access_log(&req, &res, &tv_start);
         return;
     }
 
-    /* Serve static file */
     http_response_t res;
     int err = static_serve(root, &req, &res);
 
@@ -195,8 +238,8 @@ void handle_client(int client_fd, const char *root) {
     int len = http_build_response(&res, wbuf, sizeof(wbuf));
     if (len > 0) write(client_fd, wbuf, (size_t)len);
 
-    /* Free dynamically allocated body */
-    if (err == 0 && res.body) {
+    if (err == 0 && res.body)
         free((void*)res.body);
-    }
+
+    write_access_log(&req, &res, &tv_start);
 }

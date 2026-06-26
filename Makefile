@@ -1,5 +1,5 @@
 CC      = cc
-CFLAGS  = -Wall -Wextra -O2 -std=c99 -pedantic
+CFLAGS  = -Wall -Wextra -O2 -std=c99 -pedantic -Wno-gnu-zero-variadic-macro-arguments
 LDFLAGS =
 
 SRCDIR  = src
