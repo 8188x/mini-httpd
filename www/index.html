@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>mini-httpd · It works!</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;background:#0f172a;color:#e2e8f0;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0}
+.card{background:#1e293b;border-radius:12px;padding:48px;max-width:540px;text-align:center;border:1px solid #334155}
+.logo{font-size:3rem;margin-bottom:8px}
+h1{font-size:1.5rem;font-weight:700;color:#f1f5f9;margin-bottom:6px}
+.sub{color:#94a3b8;font-size:0.85rem;margin-bottom:24px}
+.info{background:#0f172a;border-radius:8px;padding:16px;text-align:left;font-size:0.8rem;line-height:1.8;margin-bottom:20px}
+.info span{color:#38bdf8}
+.badge{display:inline-block;padding:4px 14px;border-radius:20px;font-size:0.72rem;font-weight:600;background:#2c3e7a;color:#93c5fd;margin-bottom:16px}
+.footer{color:#64748b;font-size:0.72rem;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">⚡</div>
+  <span class="badge">mini-httpd 0.1</span>
+  <h1>服务器运行正常</h1>
+  <p class="sub">从零用 C 语言手写的 HTTP 静态文件服务器</p>
+  <div class="info">
+    <span>✓</span> 事件驱动（kqueue）<br>
+    <span>✓</span> HTTP/1.1 协议解析<br>
+    <span>✓</span> 静态文件服务 · 25+ MIME 类型<br>
+    <span>✓</span> 路径安全防护 · 并发连接
+  </div>
+  <p class="footer">哈工大深圳 085404 计算机技术 · 复试项目 #2</p>
+</div>
+</body>
+</html>
