@@ -75,7 +75,10 @@ void server_run(server_t *srv) {
 
     for (;;) {
         int n = kevent(kq, NULL, 0, events, MAX_EVENTS, NULL);
-        if (n < 0) { perror("kevent"); break; }
+        if (n < 0) {
+        if (errno == EINTR) break;  /* SIGINT: graceful shutdown */
+        perror("kevent"); break;
+    }
 
         for (int i = 0; i < n; i++) {
             if (events[i].flags & EV_EOF) {
