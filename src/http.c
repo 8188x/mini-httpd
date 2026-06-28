@@ -176,6 +176,26 @@ static void write_access_log(const http_request_t *req,
                     (double)res->body_len / 1024);
     }
     fprintf(stderr, " \033[90m(%ld μs)\033[0m\n", elapsed);
+
+    /* File access log */
+    {
+        static FILE *log_fp = NULL;
+        if (!log_fp) {
+            const char *p = getenv("MINI_HTTPD_LOG");
+            log_fp = fopen(p ? p : "/tmp/mini-httpd-access.log", "a");
+        }
+        if (log_fp) {
+            char ip[64] = "-";
+            char dbuf[32];
+            time_t now_sec = end.tv_sec;
+            struct tm *ltm = localtime(&now_sec);
+            strftime(dbuf, sizeof(dbuf), "%d/%b/%Y:%H:%M:%S", ltm);
+            fprintf(log_fp, "%s - - [%s +0800] \"%s %s HTTP/1.1\" %d %zu %ld\n",
+                    ip, dbuf, req->method, req->path,
+                    res->status_code, res->body_len, elapsed);
+            fflush(log_fp);
+        }
+    }
 }
 
 /* ─── Client Handler ─────────────────────────────────────────────── */

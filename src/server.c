@@ -15,7 +15,7 @@
 
 /* ─── Global Server Stats ────────────────────────────────────────── */
 
-server_stats_t g_server_stats = {0, 0, 0, ""};
+server_stats_t g_server_stats = {0, 0, 0, 0, 0, ""};
 
 /* ─── Socket Helpers ─────────────────────────────────────────────── */
 
@@ -90,6 +90,7 @@ void server_run(server_t *srv) {
                     (struct sockaddr*)&client_addr, &addrlen);
                 if (client_fd < 0) continue;
                 set_nonblock(client_fd);
+                g_server_stats.current_connections++;
                 EV_SET(&ev, client_fd, EVFILT_READ, EV_ADD, 0, 0, NULL);
                 kevent(kq, &ev, 1, NULL, 0, NULL);
             } else {
@@ -97,6 +98,8 @@ void server_run(server_t *srv) {
                 int client_fd = events[i].ident;
                 handle_client(client_fd, srv->root);
                 close(client_fd);
+                if (g_server_stats.current_connections > 0)
+                    g_server_stats.current_connections--;
             }
         }
     }

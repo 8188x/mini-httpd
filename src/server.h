@@ -21,6 +21,8 @@ void server_close(server_t *srv);
 typedef struct {
     unsigned long total_requests;
     unsigned long total_bytes;
+    unsigned long current_connections;
+    unsigned long error_count;
     time_t start_time;
     char root[MAX_PATH];
 } server_stats_t;
